@@ -6,6 +6,7 @@ import { auth } from '../../shared/middlewares/auth';
 
 const router = express.Router();
 
+router.post('/register', AuthController.registerUser);
 router.post('/login', validateRequest(loginUserSchema), AuthController.loginUser);
 router.post('/refresh-token', AuthController.refreshToken);
 router.post('/logout', AuthController.logoutUser);

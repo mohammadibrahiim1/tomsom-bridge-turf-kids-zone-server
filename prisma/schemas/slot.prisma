@@ -1,0 +1,55 @@
+enum SportType {
+  FOOTBALL
+  CRICKET
+  BADMINTON
+  KIDS_ZONE
+}
+
+enum SlotTimeType {
+  MORNING
+  AFTERNOON
+  EVENING
+  NIGHT
+}
+
+enum SlotStatus {
+  AVAILABLE
+  BOOKED
+  LOCKED
+  MAINTENANCE
+}
+
+model TimeSlot {
+  id                    String        @id @default(uuid()) // MongoDB _id এর মতো ইউনিক অটো আইডি
+  slotId                String        @unique               // সিস্টেম বা অ্যাপ্লিকেশনের মাধ্যমে অটো জেনারেটেড ইউনিক স্লট আইডি (যেমন: "CRICKET-EVENING-1800")
+  
+  sportType             SportType     @default(FOOTBALL)    // খেলার ধরণ (Enum)
+  sportTypeBn           String?                             // বাংলায় খেলার নাম (যেমন: "ফুটবল টার্ফ")
+  
+  startTime             String                              // ফরম্যাট: "18:00" (24-hour)
+  endTime               String                              // ফরম্যাট: "19:00"
+  displayTime           String                              // UI-তে দেখানোর জন্য: "06:00 PM - 07:00 PM"
+  
+  playDurationMinutes   Int           @default(55)          // খেলার সময় (মিনিট)
+  bufferDurationMinutes Int           @default(5)           // ইন/আউট সময় (মিনিট)
+  
+  slotType              SlotTimeType  @default(EVENING)     // সকাল, দুপুর, সন্ধ্যা বা রাত
+  slotTypeBn            String?                             // "সকাল", "সন্ধ্যা" ইত্যাদি
+  
+  // প্রাইসিং অপশনসমূহ
+  regularPrice          Float                               // মূল মূল্য (যেমন: 1400)
+  peakPrice             Float?                              // পিক আওয়ার প্রাইস
+  weekendPrice          Float?                              // ছুটির দিনের প্রাইস
+  
+  // ভবিষ্যৎ প্রসারণের জন্য ডায়নামিক ফিল্ড (যেমন: { "extraNote": "VIP Slot", "maxPlayer": 12 })
+  customAttributes      Json?                               
+  
+  status                SlotStatus    @default(AVAILABLE)   // স্লটের বর্তমান অবস্থা
+  isActive              Boolean       @default(true)        // স্লটটি একটিভ আছে কি না
+  
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  @@index([sportType]) // নির্দিষ্ট খেলা অনুযায়ী দ্রুত কুয়েরি করার জন্য ইনডেক্স
+  @@map("time_slots")
+}

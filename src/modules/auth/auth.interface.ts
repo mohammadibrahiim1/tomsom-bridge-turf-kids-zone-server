@@ -9,3 +9,12 @@ export type IAuthResponse = {
   isMustChangePassword: boolean;
   requiresOtp?: boolean;
 };
+
+export interface IRegisterUser {
+  name: string;
+  phone: string;
+  username: string;
+  password: string;
+  email?: string;
+  role?: 'CUSTOMER' | 'EMPLOYEE' | 'ADMIN' | 'SUPER_ADMIN';
+}

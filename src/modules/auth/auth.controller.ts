@@ -4,9 +4,25 @@ import { AuthService } from './auth.service';
 import { catchAsync } from '../../shared/utils/catchAsync';
 import { StatusCodes } from 'http-status-codes';
 import { AppError } from '../../shared/errors/AppError';
+import { registerUserSchema } from '../user/user.validation';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
+// register user function
+const registerUser = catchAsync(async (req: Request, res: Response) => {
+  const validatedData = registerUserSchema.parse(req.body);
+
+  const result = await AuthService.registerUser(validatedData);
+
+  sendResponse(res, {
+    statusCode: 201,
+    success: true,
+    message: 'রেজিস্ট্রেশন সফল হয়েছে! অ্যাকাউন্টটি বর্তমানে অনুমোদনের জন্য অপেক্ষমাণ (PENDING) রয়েছে।',
+    data: result,
+  });
+});
+
+// login user function
 const loginUser = catchAsync(async (req: Request, res: Response) => {
   const result = await AuthService.loginUser(req.body);
   const { refreshToken, accessToken, isMustChangePassword } = result;
@@ -14,7 +30,7 @@ const loginUser = catchAsync(async (req: Request, res: Response) => {
   res.cookie('accessToken', accessToken, {
     httpOnly: true,
     secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax', // Cross-domain API হলে 'none' আবশ্যক
+    sameSite: isProduction ? 'none' : 'lax', //
     maxAge: 5 * 60 * 1000, // 5 minutes
   });
 
@@ -107,6 +123,7 @@ const getMe = catchAsync(async (req: Request, res: Response) => {
 });
 
 export const AuthController = {
+  registerUser,
   loginUser,
   refreshToken,
   logoutUser,

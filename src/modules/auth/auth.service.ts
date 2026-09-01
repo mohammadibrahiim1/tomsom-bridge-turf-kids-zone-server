@@ -1,12 +1,65 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Role, UserStatus } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { Secret } from 'jsonwebtoken';
 import { AppError } from '../../shared/errors/AppError';
 import { createToken, verifyToken } from '../../shared/utils/jwt';
-import { ILoginUser } from './auth.interface';
+import { ILoginUser, IRegisterUser } from './auth.interface';
 import { StatusCodes } from 'http-status-codes';
 
 const prisma = new PrismaClient();
+
+const registerUser = async (payload: IRegisterUser) => {
+  const { name, phone, username, password, email, role } = payload;
+
+  if (!name || !phone || !username || !password) {
+    throw new AppError(StatusCodes.BAD_REQUEST, 'নাম, ফোন নম্বর, ইউজারনেম এবং পাসওয়ারড প্রদান করুন।');
+  }
+
+  const existingUser = await prisma.user.findFirst({
+    where: {
+      OR: [{ username: username }, { phone: phone }, ...(email ? [{ email: email }] : [])],
+    },
+  });
+
+  if (existingUser) {
+    if (existingUser.username === username)
+      throw new AppError(StatusCodes.BAD_REQUEST, 'এই ইউজারনেমটি ইতিমধ্যে ব্যবহৃত হয়েছে।');
+    if (existingUser.phone === phone)
+      throw new AppError(StatusCodes.BAD_REQUEST, 'এই ফোন নম্বরটি দিয়ে ইতিমধ্যে অ্যাকাউন্ট খোলা হয়েছে।');
+    if (email && existingUser.email === email)
+      throw new AppError(StatusCodes.BAD_REQUEST, 'এই ইমেইলটি ইতিমধ্যে রেজিস্টার্ড।');
+  }
+
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  const userRole = role || Role.CUSTOMER;
+
+  const uStatus = userRole === Role.CUSTOMER ? UserStatus.APPROVED : UserStatus.PENDING;
+
+  const newUser = await prisma.user.create({
+    data: {
+      name,
+      phone,
+      username,
+      password: hashedPassword,
+      email: email || null,
+      role: userRole,
+      status: uStatus,
+    },
+    select: {
+      id: true,
+      name: true,
+      username: true,
+      phone: true,
+      email: true,
+      role: true,
+      status: true,
+      createdAt: true,
+    },
+  });
+
+  return newUser;
+};
 
 const loginUser = async (payload: ILoginUser) => {
   const { identity, password } = payload;
@@ -173,6 +226,7 @@ const getMe = async (userId: string) => {
 };
 
 export const AuthService = {
+  registerUser,
   loginUser,
   refreshToken,
   logoutUser,
