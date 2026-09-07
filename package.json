@@ -9,7 +9,10 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "prisma:import": "npx prisma-import --schemas ./prisma/schemas/*.prisma --output ./prisma/schema.prisma",
+    "prisma:generate": "yarn prisma:import && npx prisma generate",
+    "prisma:push": "yarn prisma:import && npx prisma db push"
   },
   "keywords": [],
   "author": "",
@@ -44,6 +47,7 @@
     "globals": "^17.11.0",
     "jiti": "^2.7.0",
     "prisma": "5.22.0",
+    "prisma-import": "^1.0.5",
     "ts-node-dev": "^2.0.0",
     "tsx": "^4.23.12",
     "typescript": "^7.0.2",
