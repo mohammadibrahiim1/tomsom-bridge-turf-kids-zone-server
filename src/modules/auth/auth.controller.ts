@@ -80,6 +80,7 @@ const refreshToken = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+// logout user function
 const logoutUser = catchAsync(async (req: Request, res: Response) => {
   const { refreshToken } = req.cookies;
 
@@ -95,12 +96,13 @@ const logoutUser = catchAsync(async (req: Request, res: Response) => {
     httpOnly: true,
     secure: isProduction,
     sameSite: isProduction ? 'none' : 'lax',
+    path: '/',
   });
 
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
-    message: 'User logged out successfully!',
+    message: 'See you again!',
     data: null,
   });
 });

@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 import { prisma } from './prisma';
 
-dotenv.config();
+dotenv.config(); 
 
 /**
  * Connect to the PostgreSQL database using Prisma Client.

@@ -12,7 +12,7 @@ enum VerificationType {
   NONE
 }
 
-enum UserStatus {
+enum UserStatus { 
   PENDING
   APPROVED
   REJECTED

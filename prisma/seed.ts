@@ -12,7 +12,7 @@ async function main() {
   const name = process.env.SUPER_ADMIN_NAME || 'Super Admin';
   const superAdminEmail = process.env.SUPER_ADMIN_EMAIL || 'tomsomturfsuofficial@gmail.com';
   const username = process.env.SUPER_ADMIN_USERNAME || 'tomsomturfsuadmin2026';
-  const rawPassword = process.env.SUPER_ADMIN_PASSWORD || 'TsTurf_2026_Kid@Zone!';
+  const rawPassword = process.env.SUPER_ADMIN_PASSWORD || 'TsTurf_2026_Kid@Zone!'; 
 
   const hashedPassword = await bcrypt.hash(rawPassword, 12);
 
