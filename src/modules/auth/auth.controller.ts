@@ -126,7 +126,7 @@ const getMe = catchAsync(async (req: Request, res: Response) => {
     message: 'successful!',
     data: result,
   });
-});
+}); 
 
 export const AuthController = {
   registerUser,
