@@ -61,54 +61,60 @@ const registerUser = async (payload: IRegisterUser) => {
   return newUser;
 };
 
+// user login
 const loginUser = async (payload: ILoginUser) => {
   const { identity, password } = payload;
 
-  // 1. Find user by Email OR Username
+  // 1. Required Check (Empty or Missing fields)
+  if (!identity || !identity.trim()) {
+    throw new AppError(StatusCodes.BAD_REQUEST, 'Email or Username is required');
+  }
+
+  if (!password || !password.trim()) {
+    throw new AppError(StatusCodes.BAD_REQUEST, 'Password is required');
+  }
+
+  const cleanIdentity = identity.trim();
+  const cleanPassword = password.trim();
+
+  // 2. Find user by Email OR Username
   const user = await prisma.user.findFirst({
     where: {
-      OR: [
-        {
-          email: identity.trim(),
-        },
-        {
-          username: identity.trim(),
-        },
-      ],
+      OR: [{ email: cleanIdentity }, { username: cleanIdentity }],
       isDeleted: false,
     },
   });
 
+  // Security Note: User না থাকলেও 'Invalid credentials' থ্রো করা ভালো
   if (!user) {
-    throw new AppError(StatusCodes.NOT_FOUND, 'User does not exist');
+    throw new AppError(StatusCodes.UNAUTHORIZED, 'Invalid credentials');
   }
 
-  // 2. Check account status
+  // 3. Account Status Check
   if (!user.isActive) {
-    throw new AppError(StatusCodes.FORBIDDEN, 'Your account is deactivated');
+    throw new AppError(StatusCodes.FORBIDDEN, 'Your account has been deactivated. Please contact support.');
   }
 
-  // 3. Check password
-  const isPasswordMatched = await bcrypt.compare(password.trim(), user.password);
+  // 4. Password Check
+  const isPasswordMatched = await bcrypt.compare(cleanPassword, user.password);
 
   if (!isPasswordMatched) {
-    throw new AppError(StatusCodes.UNAUTHORIZED, 'Password incorrect');
+    throw new AppError(StatusCodes.UNAUTHORIZED, 'Invalid credentials');
   }
 
-  // 4. JWT Payload
+  // 5. JWT Payload setup
   const jwtPayload = {
     id: user.id,
     role: user.role,
     email: user.email,
   };
 
-  // 5. Generate Access Token
+  // 6. Generate Tokens
   const accessToken = createToken(jwtPayload, process.env.JWT_SECRET_KEY as Secret, '5m');
 
-  // 6. Generate Refresh Token
   const refreshToken = createToken({ id: user.id }, process.env.JWT_REFRESH_SECRET_KEY as Secret, '1d');
 
-  // 7. Save Refresh Token & Update Last Login
+  // 7. DB Transaction for Refresh Token & Last Login
   await prisma.$transaction([
     prisma.refreshToken.create({
       data: {
@@ -117,22 +123,23 @@ const loginUser = async (payload: ILoginUser) => {
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
       },
     }),
-
     prisma.user.update({
-      where: {
-        id: user.id,
-      },
-      data: {
-        lastLogin: new Date(),
-      },
+      where: { id: user.id },
+      data: { lastLogin: new Date() },
     }),
   ]);
 
-  // 8. Return Login Data
+  // 8. Safe Return Data
   return {
     accessToken,
     refreshToken,
-    isMustChangePassword: user.isMustChangePassword,
+    user: {
+      id: user.id,
+      email: user.email,
+      username: user.username,
+      role: user.role,
+      isMustChangePassword: user.isMustChangePassword,
+    },
   };
 };
 

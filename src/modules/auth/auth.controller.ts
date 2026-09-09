@@ -25,33 +25,37 @@ const registerUser = catchAsync(async (req: Request, res: Response) => {
 // login user function
 const loginUser = catchAsync(async (req: Request, res: Response) => {
   const result = await AuthService.loginUser(req.body);
-  const { refreshToken, accessToken, isMustChangePassword } = result;
+  const { refreshToken, accessToken, user } = result;
 
+  // Set Access Token in HTTP-Only Cookie
   res.cookie('accessToken', accessToken, {
     httpOnly: true,
     secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax', //
+    sameSite: isProduction ? 'none' : 'lax',
     maxAge: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Set Refresh Token into HTTP-Only Cookie
+  // Set Refresh Token in HTTP-Only Cookie
   res.cookie('refreshToken', refreshToken, {
     httpOnly: true,
     secure: isProduction,
     sameSite: isProduction ? 'none' : 'lax',
-    maxAge: 24 * 60 * 60 * 1000, // 1 days
+    maxAge: 24 * 60 * 60 * 1000, // 1 day
   });
 
+  // Clean success response for user
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
-    message: 'Welcome to tomsom turf!',
+    message: 'Login successful! Welcome to Tomsom Turf.',
     data: {
-      isMustChangePassword,
+      user,
+      accessToken, // optional (যদি frontend header/redux-এ সেভ করতে চান)
     },
   });
 });
 
+// refresh token function
 const refreshToken = catchAsync(async (req: Request, res: Response) => {
   const { refreshToken } = req.cookies;
   const result = await AuthService.refreshToken(refreshToken);
