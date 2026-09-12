@@ -31,24 +31,33 @@ enum SportType {
   CRICKET
   BADMINTON
   KIDS_ZONE
+  TENNIS
+  BASKETBALL
 }
 
 enum GroundType {
   PITCH_1_SMALL
-  PITCH_2_LARGE
+  PITCH_2_MEDIUM
+  PITCH_3_LARGE
+  INDOR_TURF
+  ROOFTOP_TURF
+  VIP_TURF
 }
 
 enum SlotTimeType {
+  EARLY_MORNING
   MORNING
   AFTERNOON
   EVENING
   NIGHT
+  LATE_NIGHT
+  Weekend_SPECIAL
 }
 
 enum SlotStatus {
   AVAILABLE
   BOOKED
-  LOCKED // Temporarily held during checkout
+  LOCKED
   MAINTENANCE
 }
 

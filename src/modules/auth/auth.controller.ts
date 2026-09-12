@@ -5,7 +5,6 @@ import { catchAsync } from '../../shared/utils/catchAsync';
 import { StatusCodes } from 'http-status-codes';
 import { AppError } from '../../shared/errors/AppError';
 import { registerUserSchema } from '../user/user.validation';
-
 const isProduction = process.env.NODE_ENV === 'production';
 
 // register user function
@@ -50,7 +49,7 @@ const loginUser = catchAsync(async (req: Request, res: Response) => {
     message: 'Login successful! Welcome to Tomsom Turf.',
     data: {
       user,
-      accessToken, // optional (যদি frontend header/redux-এ সেভ করতে চান)
+      accessToken, 
     },
   });
 });
@@ -79,8 +78,8 @@ const refreshToken = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     statusCode: StatusCodes.OK,
     success: true,
-    message: 'New access token generated successfully!',
-    data: null,
+    message: 'generate access token!',
+    data: {accessToken:result?.accessToken},
   });
 });
 

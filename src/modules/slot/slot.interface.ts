@@ -14,7 +14,7 @@ export interface ICreateSlot {
   bookingDate?: Date | string;
   playDurationMinutes?: number;
   bufferDurationMinutes?: number;
-  slotType?: SlotTimeType;
+  slotTimeType?: SlotTimeType;
   slotTypeBn?: string;
   regularPrice: number;
   extraGroundCharge?: number;
@@ -39,7 +39,7 @@ export interface ISlotFilterOptions {
   endTime?: string; // "19:00"
   groundType?: GroundType;
   sportType?: SportType;
-  slotType?: SlotTimeType;
+  slotTimeType?: SlotTimeType;
   packageNumber?: number;
   status?: SlotStatus;
   isNightMatch?: boolean;

@@ -1,4 +1,4 @@
-// src/shared/errors/globalErrorHandler.ts
+
 import { Request, Response, NextFunction, ErrorRequestHandler } from 'express';
 import { ZodError } from 'zod';
 import { Prisma } from '@prisma/client';
@@ -38,25 +38,30 @@ export const globalErrorHandler: ErrorRequestHandler = (
       clientMessage = 'Database request failed due to invalid input data.';
     }
   }
-  // 3. Custom AppError (Domain/Business Logic Errors)
+  // 3. NEW: Prisma Validation Errors 
+  else if (err instanceof Prisma.PrismaClientValidationError || err.name === 'PrismaClientValidationError') {
+    statusCode = 400;
+    clientMessage = 'প্রদত্ত তথ্যগুলো সঠিক নয় বা ডাটা ফরম্যাটে ভুল রয়েছে। দয়া করে ফর্মের ইনপুটগুলো চেক করুন।';
+  }
+  // 4. Custom AppError (Domain/Business Logic Errors)
   else if (err instanceof AppError) {
     statusCode = err.statusCode;
     clientMessage = err.message;
   }
-  // 4. JWT Authentication Errors
+  // 5. JWT Authentication Errors
   else if (err.name === 'UnauthorizedError' || err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
     statusCode = 401;
     clientMessage = 'Your session has expired or is invalid. Please log in again.';
   }
-  // 5. Unknown or Unhandled Internal Server Errors
+  // 6. Unknown or Unhandled Internal Server Errors
   else {
     statusCode = 500;
     clientMessage = 'An internal server error occurred. Please try again later.';
   }
 
-  // Safe Developer Console Logging (Only in non-production environments)
+
   if (!isProduction) {
-    console.error('💥 [DEV_ERROR_LOG]:', {
+    console.error('[DEV_ERROR_LOG]:', {
       timestamp: new Date().toISOString(),
       path: req.originalUrl,
       method: req.method,
@@ -65,13 +70,13 @@ export const globalErrorHandler: ErrorRequestHandler = (
     });
   }
 
-  // Client Response Formatting
+  
   res.status(statusCode).json({
     success: false,
     statusCode,
     message: clientMessage,
     errorDetails: errorDetails || null,
-    // Strictly expose stack trace ONLY when NODE_ENV is explicitly set to 'development'
+  
     ...(process.env.NODE_ENV === 'development' && {
       developerError: {
         rawMessage: err.message,
@@ -79,4 +84,4 @@ export const globalErrorHandler: ErrorRequestHandler = (
       },
     }),
   });
-};
+}; 

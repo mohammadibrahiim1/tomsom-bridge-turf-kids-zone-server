@@ -29,7 +29,7 @@ export const auth = (...requiredRoles: string[]) => {
     // 2. Token Verify
     let verifiedUser: JwtPayload;
     try {
-      verifiedUser = jwt.verify(token, process.env.JWT_SECRET_KEY as Secret) as JwtPayload;
+      verifiedUser = jwt.verify(token, process.env.JWT_ACCESS_SECRET_KEY as Secret) as JwtPayload;
     } catch (err) {
       throw new AppError(StatusCodes.UNAUTHORIZED, 'Invalid or expired access token!');
     }

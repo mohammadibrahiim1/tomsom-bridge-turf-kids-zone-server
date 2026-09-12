@@ -110,7 +110,7 @@ const loginUser = async (payload: ILoginUser) => {
   };
 
   // 6. Generate Tokens
-  const accessToken = createToken(jwtPayload, process.env.JWT_SECRET_KEY as Secret, '5m');
+  const accessToken = createToken(jwtPayload, process.env.JWT_ACCESS_SECRET_KEY as Secret, '15m');
 
   const refreshToken = createToken({ id: user.id }, process.env.JWT_REFRESH_SECRET_KEY as Secret, '1d');
 
@@ -169,7 +169,7 @@ const refreshToken = async (token: string) => {
     email: existingRefreshToken.user.email,
   };
 
-  const newAccessToken = createToken(jwtPayload, process.env.JWT_SECRET_KEY as Secret, '15m');
+  const newAccessToken = createToken(jwtPayload, process.env.JWT_ACCESS_SECRET_KEY as Secret, '15m');
 
   const newRefreshToken = createToken(
     { id: existingRefreshToken.user.id },

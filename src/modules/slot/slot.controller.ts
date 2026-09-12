@@ -1,8 +1,8 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { SlotService } from './slot.service';
 
 export const SlotController = {
-  createSlot: async (req: Request, res: Response) => {
+  createSlot: async (req: Request, res: Response,next: NextFunction) => {
     try {
       const result = await SlotService.createSlot(req.body);
 
@@ -12,10 +12,8 @@ export const SlotController = {
         data: result,
       });
     } catch (error: any) {
-      return res.status(400).json({
-        success: false,
-        message: error.message || 'Failed to create slot.',
-      });
+      console.log('Error creating slot:', error);
+     next(error)
     }
   },
 
@@ -61,6 +59,42 @@ export const SlotController = {
       return res.status(500).json({
         success: false,
         message: error.message || 'internal server error!',
+      });
+    }
+  },
+
+
+
+
+  deleteSlots: async (req: Request, res: Response): Promise<Response> => {
+    try {
+      const { ids } = req.body;
+
+      if (!ids) {
+        return res.status(400).json({
+          success: false,
+          message: 'ডিলিট করার জন্য অন্তত একটি স্লট আইডি প্রদান করুন।',
+        });
+      }
+
+      const deleteResult = await SlotService.deleteSlots(ids);
+
+      if (deleteResult.count === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'যে স্লটগুলো মুছতে চাচ্ছেন তা খুঁজে পাওয়া যায়নি।',
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: `${deleteResult.count} টি স্লট সফলভাবে মুছে ফেলা হয়েছে।`,
+        deletedCount: deleteResult.count,
+      });
+    } catch (error: any) {
+      return res.status(500).json({
+        success: false,
+        message: error.message || 'স্লট ডিলিট করার সময় সার্ভারে সমস্যা হয়েছে।',
       });
     }
   },

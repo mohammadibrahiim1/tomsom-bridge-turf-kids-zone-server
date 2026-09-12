@@ -8,7 +8,7 @@ export const SlotService = {
     // 1. Check if slotId already exists
     const existingSlot = await prisma.slot.findUnique({
       where: { slotId: payload.slotId },
-    });
+    }); 
 
     if (existingSlot) {
       throw new Error(`Slot with ID '${payload.slotId}' already exists.`);
@@ -18,12 +18,13 @@ export const SlotService = {
     const extraCharge = payload.extraGroundCharge ?? 200;
     const calculatedTotalPrice =
       payload.totalPrice ??
-      (payload.groundType === 'PITCH_2_LARGE' ? payload.regularPrice + extraCharge : payload.regularPrice);
+      (payload.groundType === 'PITCH_3_LARGE' ? payload.regularPrice + extraCharge : payload.regularPrice);
 
     // 3. Save to database
     const newSlot = await prisma.slot.create({
       data: {
         ...payload,
+        slotType: payload.slotTimeType,
         extraGroundCharge: extraCharge,
         totalPrice: calculatedTotalPrice,
         bookingDate: payload.bookingDate ? new Date(payload.bookingDate) : null,
@@ -31,7 +32,7 @@ export const SlotService = {
     });
 
     return newSlot;
-  },
+  }, 
 
   getAllSlots: async (filters: ISlotFilterOptions, pagination: IPaginationOptions) => {
     const {
@@ -43,7 +44,7 @@ export const SlotService = {
       endTime,
       groundType,
       sportType,
-      slotType,
+      slotTimeType,
       packageNumber,
       status,
       isNightMatch,
@@ -77,9 +78,9 @@ export const SlotService = {
     // Exact Match Filters
     if (groundType) andConditions.push({ groundType });
     if (sportType) andConditions.push({ sportType });
-    if (slotType) andConditions.push({ slotType });
+    if (slotTimeType) andConditions.push({ slotType: slotTimeType });
     if (packageNumber) andConditions.push({ packageNumber: Number(packageNumber) });
-    if (status) andConditions.push({ status });
+    if (status) andConditions.push({ status }); 
 
     // Amenities / Features Filters (Matching the handwritten turf sheet)
     if (isNightMatch !== undefined) andConditions.push({ isNightMatch: isNightMatch === true });
@@ -151,4 +152,29 @@ export const SlotService = {
       data: result,
     };
   },
+
+
+/**
+   * Delete single or multiple slots by their ID(s)
+   * @param ids - Can be a single ID string or an array of ID strings
+   */
+ deleteSlots: async (ids: string | string[]) => {
+    const idArray = Array.isArray(ids) ? ids : [ids];
+
+    if (idArray.length === 0) {
+      throw new Error('ডিলিট করার জন্য অন্তত একটি স্লট আইডি প্রদান করুন।');
+    }
+
+    const deleteResult = await prisma.slot.deleteMany({
+      where: {
+        id: {
+          in: idArray,
+        },
+      },
+    });
+
+    return deleteResult;
+  },
+
+
 };

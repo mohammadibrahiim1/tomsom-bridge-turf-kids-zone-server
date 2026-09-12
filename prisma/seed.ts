@@ -14,7 +14,7 @@ async function main() {
   const username = process.env.SUPER_ADMIN_USERNAME || 'tomsomturfsuadmin2026';
   const rawPassword = process.env.SUPER_ADMIN_PASSWORD || 'TsTurf_2026_Kid@Zone!'; 
 
-  const hashedPassword = await bcrypt.hash(rawPassword, 12);
+  const hashedPassword = await bcrypt.hash(rawPassword, 12);     
 
   const user = await prisma.user.upsert({
     where: {
