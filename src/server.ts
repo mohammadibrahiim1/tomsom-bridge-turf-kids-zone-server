@@ -3,17 +3,19 @@ dotenv.config();
 
 import { Server } from 'http';
 import app from './app';
-import { connectDB } from './shared/config/db';
+import connectDB from './shared/config/db';
 
-const PORT = process.env.PORT || 9000;
-
+const PORT = Number(process.env.PORT) || 9000;
 let server: Server;
 
 async function main() {
   try {
+    // Connect to Database
     await connectDB();
-    server = app.listen(PORT, () => {
-      console.log(`🚀 Server is running on http://localhost:${PORT}`);
+
+    // Start Express Server
+    server = app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🌐 Server is running on http://localhost:${PORT}`);
     });
   } catch (err) {
     console.error('💥 Failed to start server:', err);
@@ -28,7 +30,7 @@ process.on('unhandledRejection', (err) => {
   console.error('💥 UNHANDLED REJECTION! Shutting down...', err);
   if (server) {
     server.close(() => {
-      process.exit(1);
+      process.exit(1); 
     });
   } else {
     process.exit(1);

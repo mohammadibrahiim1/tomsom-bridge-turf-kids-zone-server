@@ -1,14 +1,10 @@
-import { Prisma, PrismaClient, Slot } from '@prisma/client';
-import { ICreateSlot, IPaginationOptions, ISlotFilterOptions } from './slot.interface';
-
-const prisma = new PrismaClient();
+import { Slot } from './slot.model';
+import { ICreateSlot, IPaginationOptions, ISlotFilterOptions, ISlot } from './slot.interface';
 
 export const SlotService = {
-  createSlot: async (payload: ICreateSlot): Promise<Slot> => {
+  createSlot: async (payload: ICreateSlot): Promise<ISlot> => {
     // 1. Check if slotId already exists
-    const existingSlot = await prisma.slot.findUnique({
-      where: { slotId: payload.slotId },
-    }); 
+    const existingSlot = await Slot.findOne({ slotId: payload.slotId });   
 
     if (existingSlot) {
       throw new Error(`Slot with ID '${payload.slotId}' already exists.`);
@@ -21,18 +17,16 @@ export const SlotService = {
       (payload.groundType === 'PITCH_3_LARGE' ? payload.regularPrice + extraCharge : payload.regularPrice);
 
     // 3. Save to database
-    const newSlot = await prisma.slot.create({
-      data: {
-        ...payload,
-        slotType: payload.slotTimeType,
-        extraGroundCharge: extraCharge,
-        totalPrice: calculatedTotalPrice,
-        bookingDate: payload.bookingDate ? new Date(payload.bookingDate) : null,
-      },
+    const newSlot = await Slot.create({
+      ...payload,
+      slotTimeType: payload.slotTimeType,
+      extraGroundCharge: extraCharge,
+      totalPrice: calculatedTotalPrice,
+      bookingDate: payload.bookingDate ? new Date(payload.bookingDate) : null,
     });
 
     return newSlot;
-  }, 
+  },
 
   getAllSlots: async (filters: ISlotFilterOptions, pagination: IPaginationOptions) => {
     const {
@@ -59,18 +53,17 @@ export const SlotService = {
     const skip = (Number(page) - 1) * Number(limit);
     const take = Number(limit);
 
-    // Build Prisma AND Conditions
-    const andConditions: Prisma.SlotWhereInput[] = [];
+    const andConditions: Record<string, unknown>[] = [];
 
-    // Global Search (Search across Bangla/English Names and SlotId)
+    // Global Search
     if (searchTerm) {
       andConditions.push({
-        OR: [
-          { slotId: { contains: searchTerm, mode: 'insensitive' } },
-          { packageName: { contains: searchTerm, mode: 'insensitive' } },
-          { groundTypeBn: { contains: searchTerm, mode: 'insensitive' } },
-          { sportTypeBn: { contains: searchTerm, mode: 'insensitive' } },
-          { slotTypeBn: { contains: searchTerm, mode: 'insensitive' } },
+        $or: [
+          { slotId: { $regex: searchTerm, $options: 'insensitive' } },
+          { packageName: { $regex: searchTerm, $options: 'insensitive' } },
+          { groundTypeBn: { $regex: searchTerm, $options: 'insensitive' } },
+          { sportTypeBn: { $regex: searchTerm, $options: 'insensitive' } },
+          { slotTypeBn: { $regex: searchTerm, $options: 'insensitive' } },
         ],
       });
     }
@@ -78,20 +71,20 @@ export const SlotService = {
     // Exact Match Filters
     if (groundType) andConditions.push({ groundType });
     if (sportType) andConditions.push({ sportType });
-    if (slotTimeType) andConditions.push({ slotType: slotTimeType });
+    if (slotTimeType) andConditions.push({ slotTimeType });
     if (packageNumber) andConditions.push({ packageNumber: Number(packageNumber) });
-    if (status) andConditions.push({ status }); 
+    if (status) andConditions.push({ status });
 
-    // Amenities / Features Filters (Matching the handwritten turf sheet)
+    // Amenities Filters
     if (isNightMatch !== undefined) andConditions.push({ isNightMatch: isNightMatch === true });
     if (hasRainEffect !== undefined) andConditions.push({ hasRainEffect: hasRainEffect === true });
     if (hasSoundSystem !== undefined) andConditions.push({ hasSoundSystem: hasSoundSystem === true });
 
     // Time Filters
-    if (startTime) andConditions.push({ startTime: { gte: startTime } });
-    if (endTime) andConditions.push({ endTime: { lte: endTime } });
+    if (startTime) andConditions.push({ startTime: { $gte: startTime } });
+    if (endTime) andConditions.push({ endTime: { $lte: endTime } });
 
-    // Date Filters (Supports single date or range query)
+    // Date Filters
     if (bookingDate) {
       const targetDate = new Date(bookingDate);
       const startOfDay = new Date(targetDate.setHours(0, 0, 0, 0));
@@ -99,45 +92,36 @@ export const SlotService = {
 
       andConditions.push({
         bookingDate: {
-          gte: startOfDay,
-          lte: endOfDay,
+          $gte: startOfDay,
+          $lte: endOfDay,
         },
       });
     } else if (startDate && endDate) {
       andConditions.push({
         bookingDate: {
-          gte: new Date(startDate),
-          lte: new Date(endDate),
+          $gte: new Date(startDate),
+          $lte: new Date(endDate),
         },
       });
     }
 
     // Price Filtering Range
     if (minPrice !== undefined || maxPrice !== undefined) {
-      andConditions.push({
-        totalPrice: {
-          gte: minPrice !== undefined ? Number(minPrice) : undefined,
-          lte: maxPrice !== undefined ? Number(maxPrice) : undefined,
-        },
-      });
+      const priceQuery: Record<string, number> = {};
+      if (minPrice !== undefined) priceQuery.$gte = Number(minPrice);
+      if (maxPrice !== undefined) priceQuery.$lte = Number(maxPrice);
+      andConditions.push({ totalPrice: priceQuery });
     }
 
     // Only active slots
     andConditions.push({ isActive: true });
 
-    const whereConditions: Prisma.SlotWhereInput = andConditions.length > 0 ? { AND: andConditions } : {};
+    const whereConditions = andConditions.length > 0 ? { $and: andConditions } : {};
+    const sortOptions: Record<string, 1 | -1> = { [sortBy]: sortOrder === 'asc' ? 1 : -1 };
 
-    // Execute query and total count concurrently for performance
     const [result, total] = await Promise.all([
-      prisma.slot.findMany({
-        where: whereConditions,
-        skip,
-        take,
-        orderBy: {
-          [sortBy]: sortOrder,
-        },
-      }),
-      prisma.slot.count({ where: whereConditions }),
+      Slot.find(whereConditions).skip(skip).limit(take).sort(sortOptions),
+      Slot.countDocuments(whereConditions),
     ]);
 
     const totalPage = Math.ceil(total / take);
@@ -153,28 +137,17 @@ export const SlotService = {
     };
   },
 
-
-/**
-   * Delete single or multiple slots by their ID(s)
-   * @param ids - Can be a single ID string or an array of ID strings
-   */
- deleteSlots: async (ids: string | string[]) => {
+  deleteSlots: async (ids: string | string[]) => {
     const idArray = Array.isArray(ids) ? ids : [ids];
 
     if (idArray.length === 0) {
       throw new Error('ডিলিট করার জন্য অন্তত একটি স্লট আইডি প্রদান করুন।');
     }
 
-    const deleteResult = await prisma.slot.deleteMany({
-      where: {
-        id: {
-          in: idArray,
-        },
-      },
+    const deleteResult = await Slot.deleteMany({
+      _id: { $in: idArray },
     });
 
-    return deleteResult;
+    return { count: deleteResult.deletedCount || 0 };
   },
-
-
 };

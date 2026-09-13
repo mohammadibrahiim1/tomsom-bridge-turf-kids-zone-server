@@ -1,7 +1,12 @@
-export type ILoginUser = {
-  identity: string; // Email, Phone, or Username
-  password: string;
-};
+import { TLoginInput, TRegisterInput } from "../user/user.validation";
+
+export type ILoginUser = TLoginInput;
+export type IRegisterUser = TRegisterInput;
+
+// export type ILoginUser = {
+//   identity: string; // Email, Phone, or Username
+//   password: string;
+// };
 
 export type IAuthResponse = {
   accessToken: string;
@@ -10,11 +15,11 @@ export type IAuthResponse = {
   requiresOtp?: boolean;
 };
 
-export interface IRegisterUser {
-  name: string;
-  phone: string;
-  username: string;
-  password: string;
-  email?: string;
-  role?: 'CUSTOMER' | 'EMPLOYEE' | 'ADMIN' | 'SUPER_ADMIN';
-}
+// export interface IRegisterUser {
+//   name: string;
+//   phone: string;
+//   username: string;
+//   password: string;
+//   email?: string;
+//   role?: 'CUSTOMER' | 'EMPLOYEE' | 'ADMIN' | 'SUPER_ADMIN';
+// }

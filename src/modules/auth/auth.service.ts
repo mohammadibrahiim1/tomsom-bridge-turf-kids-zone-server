@@ -1,24 +1,21 @@
-import { PrismaClient, Role, UserStatus } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { Secret } from 'jsonwebtoken';
-import { AppError } from '../../shared/errors/AppError';
-import { createToken, verifyToken } from '../../shared/utils/jwt';
 import { ILoginUser, IRegisterUser } from './auth.interface';
 import { StatusCodes } from 'http-status-codes';
-
-const prisma = new PrismaClient();
+import { AppError } from '../../shared/errors/AppError';
+import { createToken, verifyToken } from '../../shared/utils/jwt';
+import { User, RefreshToken } from '../user/user.model';
+import mongoose from 'mongoose';
 
 const registerUser = async (payload: IRegisterUser) => {
-  const { name, phone, username, password, email, role } = payload;
+  const { name, phone, username, password, email, avatarUrl } = payload;
 
-  if (!name || !phone || !username || !password) {
-    throw new AppError(StatusCodes.BAD_REQUEST, 'নাম, ফোন নম্বর, ইউজারনেম এবং পাসওয়ারড প্রদান করুন।');
-  }
-
-  const existingUser = await prisma.user.findFirst({
-    where: {
-      OR: [{ username: username }, { phone: phone }, ...(email ? [{ email: email }] : [])],
-    },
+  const existingUser = await User.findOne({
+    $or: [
+      ...(username ? [{ username }] : []),
+      ...(phone ? [{ phone }] : []),
+      ...(email ? [{ email }] : []),
+    ],
   });
 
   if (existingUser) {
@@ -32,158 +29,166 @@ const registerUser = async (payload: IRegisterUser) => {
 
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  const userRole = role || Role.CUSTOMER;
-
-  const uStatus = userRole === Role.CUSTOMER ? UserStatus.APPROVED : UserStatus.PENDING;
-
-  const newUser = await prisma.user.create({
-    data: {
-      name,
-      phone,
-      username,
-      password: hashedPassword,
-      email: email || null,
-      role: userRole,
-      status: uStatus,
-    },
-    select: {
-      id: true,
-      name: true,
-      username: true,
-      phone: true,
-      email: true,
-      role: true,
-      status: true,
-      createdAt: true,
-    },
+  const newUser = await User.create({
+    name,
+    phone,
+    username,
+    password: hashedPassword,
+    email: email || null,
+    avatar_url: avatarUrl || null,
+    role: 'CUSTOMER',
+    status: 'APPROVED',
   });
 
-  return newUser;
+  return {
+    id: newUser._id,
+    name: newUser.name,
+    username: newUser.username,
+    phone: newUser.phone,
+    email: newUser.email,
+    role: newUser.role,
+    status: newUser.status,
+    createdAt: newUser.createdAt,
+  };
 };
 
-// user login
 const loginUser = async (payload: ILoginUser) => {
   const { identity, password } = payload;
-
-  // 1. Required Check (Empty or Missing fields)
-  if (!identity || !identity.trim()) {
-    throw new AppError(StatusCodes.BAD_REQUEST, 'Email or Username is required');
-  }
-
-  if (!password || !password.trim()) {
-    throw new AppError(StatusCodes.BAD_REQUEST, 'Password is required');
-  }
-
   const cleanIdentity = identity.trim();
   const cleanPassword = password.trim();
 
-  // 2. Find user by Email OR Username
-  const user = await prisma.user.findFirst({
-    where: {
-      OR: [{ email: cleanIdentity }, { username: cleanIdentity }],
-      isDeleted: false,
-    },
+  const user = await User.findOne({
+    $or: [
+      { email: cleanIdentity },
+      { username: cleanIdentity },
+      { phone: cleanIdentity },
+    ],
+    is_deleted: false,
   });
 
-  // Security Note: User না থাকলেও 'Invalid credentials' থ্রো করা ভালো
   if (!user) {
     throw new AppError(StatusCodes.UNAUTHORIZED, 'Invalid credentials');
   }
 
-  // 3. Account Status Check
-  if (!user.isActive) {
+  if (!user.is_active) {
     throw new AppError(StatusCodes.FORBIDDEN, 'Your account has been deactivated. Please contact support.');
   }
 
-  // 4. Password Check
   const isPasswordMatched = await bcrypt.compare(cleanPassword, user.password);
-
   if (!isPasswordMatched) {
     throw new AppError(StatusCodes.UNAUTHORIZED, 'Invalid credentials');
   }
 
-  // 5. JWT Payload setup
   const jwtPayload = {
-    id: user.id,
+    id: user._id,
     role: user.role,
     email: user.email,
   };
 
-  // 6. Generate Tokens
   const accessToken = createToken(jwtPayload, process.env.JWT_ACCESS_SECRET_KEY as Secret, '15m');
+  const refreshToken = createToken({ id: user._id }, process.env.JWT_REFRESH_SECRET_KEY as Secret, '1d');
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-  const refreshToken = createToken({ id: user.id }, process.env.JWT_REFRESH_SECRET_KEY as Secret, '1d');
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-  // 7. DB Transaction for Refresh Token & Last Login
-  await prisma.$transaction([
-    prisma.refreshToken.create({
-      data: {
-        token: refreshToken,
-        userId: user.id,
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-      },
-    }),
-    prisma.user.update({
-      where: { id: user.id },
-      data: { lastLogin: new Date() },
-    }),
-  ]);
+  try {
+    await RefreshToken.create(
+      [
+        {
+          token: refreshToken,
+          user_id: user._id,
+          expires_at: expiresAt,
+        },
+      ],
+      { session }
+    );
 
-  // 8. Safe Return Data
+    await User.findByIdAndUpdate(
+      user._id,
+      { last_login: new Date() },
+      { session }
+    );
+
+    await session.commitTransaction();
+    session.endSession();
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    throw error;
+  }
+
   return {
     accessToken,
     refreshToken,
     user: {
-      id: user.id,
+      id: user._id,
       email: user.email,
       username: user.username,
       role: user.role,
-      isMustChangePassword: user.isMustChangePassword,
+      isMustChangePassword: user.is_must_change_password,
     },
   };
 };
 
-const refreshToken = async (token: string) => {
-  let decodedData;
+const refreshTokenService = async (token: string) => {
   try {
-    decodedData = verifyToken(token, process.env.JWT_REFRESH_SECRET_KEY as Secret);
-  } catch (err) {
+    verifyToken(token, process.env.JWT_REFRESH_SECRET_KEY as Secret);
+  } catch {
     throw new AppError(StatusCodes.FORBIDDEN, 'Invalid Refresh Token');
   }
 
-  const existingRefreshToken = await prisma.refreshToken.findUnique({
-    where: { token },
-    include: { user: true },
-  });
+  const existingRefreshToken = await RefreshToken.findOne({ token }).populate('user_id');
 
-  if (!existingRefreshToken) {
+  if (!existingRefreshToken || !existingRefreshToken.user_id) {
     throw new AppError(StatusCodes.FORBIDDEN, 'Refresh token revoked or not found');
   }
 
-  // Token Rotation:
-  await prisma.refreshToken.delete({ where: { token } });
-
-  const jwtPayload = {
-    id: existingRefreshToken.user.id,
-    role: existingRefreshToken.user.role,
-    email: existingRefreshToken.user.email,
+  const user = existingRefreshToken.user_id as unknown as {
+    _id: mongoose.Types.ObjectId;
+    role: string;
+    email?: string | null;
   };
 
-  const newAccessToken = createToken(jwtPayload, process.env.JWT_ACCESS_SECRET_KEY as Secret, '15m');
+  let newAccessToken:string ;
+  
+  let newRefreshToken:string;
 
-  const newRefreshToken = createToken(
-    { id: existingRefreshToken.user.id },
-    process.env.JWT_REFRESH_SECRET_KEY as Secret,
-    '1d',
-  );
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-  await prisma.refreshToken.create({
-    data: {
-      token: newRefreshToken,
-      userId: existingRefreshToken.user.id,
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-    },
-  });
+  try {
+    await RefreshToken.deleteOne({ token }).session(session);
+
+    const jwtPayload = {
+      id: user._id,
+      role: user.role,
+      email: user.email,
+    };
+
+    newAccessToken = createToken(jwtPayload, process.env.JWT_ACCESS_SECRET_KEY as Secret, '15m');
+    newRefreshToken = createToken({ id: user._id }, process.env.JWT_REFRESH_SECRET_KEY as Secret, '1d');
+
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    await RefreshToken.create(
+      [
+        {
+          token: newRefreshToken,
+          user_id: user._id,
+          expires_at: expiresAt,
+        },
+      ],
+      { session }
+    );
+
+    await session.commitTransaction();
+    session.endSession();
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    throw error;
+  }
 
   return {
     accessToken: newAccessToken,
@@ -193,49 +198,37 @@ const refreshToken = async (token: string) => {
 
 const logoutUser = async (refreshToken?: string) => {
   if (refreshToken) {
-    await prisma.refreshToken.deleteMany({
-      where: { token: refreshToken },
-    });
+    await RefreshToken.deleteOne({ token: refreshToken });
   }
   return null;
 };
 
 const getMe = async (userId: string) => {
-  const user = await prisma.user.findFirst({
-    where: {
-      id: userId,
-      isDeleted: false,
-      isActive: true,
-    },
-    select: {
-      id: true,
-      // username: true,
-      name: true,
-      // email: true,
-      phone: true,
-      role: true,
-      // avatarUrl: true,
-      // isMustChangePassword: true,
-      // isEmailVerified: true,
-      // isPhoneVerified: true,
-      // verificationType: true,
-      // isActive: true,
-      // lastLogin: true,
-      // createdAt: true,
-    },
-  });
+  const user = await User.findOne({
+    _id: userId,
+    is_deleted: false,
+    is_active: true,
+  }).select('name phone role email username avatar_url');
 
   if (!user) {
     throw new AppError(StatusCodes.NOT_FOUND, 'User profile not found or account deactivated!');
   }
 
-  return user;
+  return {
+    id: user._id,
+    name: user.name,
+    phone: user.phone,
+    role: user.role,
+    email: user.email,
+    username: user.username,
+    avatarUrl: user.avatar_url,
+  };
 };
 
 export const AuthService = {
   registerUser,
   loginUser,
-  refreshToken,
+  refreshToken: refreshTokenService,
   logoutUser,
   getMe,
 };
