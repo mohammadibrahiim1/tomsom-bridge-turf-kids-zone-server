@@ -1,0 +1,71 @@
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  CUSTOMER
+  EMPLOYEE
+}
+
+enum VerificationType {
+  EMAIL
+  PHONE
+  BOTH
+  NONE
+}
+
+enum UserStatus { 
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id       String  @id @default(uuid())
+  username String? @unique
+  name     String
+  email    String? @unique
+  phone    String? @unique
+  password String
+  role     Role    @default(CUSTOMER)
+  status   UserStatus        @default(PENDING)
+
+  // Profile Photo
+  avatarUrl String?
+
+  // Security & Password Management
+  isMustChangePassword Boolean   @default(false)
+  passwordResetToken   String?
+  passwordResetExpires DateTime?
+
+  // Future-Proof Verification & OTP System
+  isEmailVerified  Boolean          @default(false)
+  isPhoneVerified  Boolean          @default(false)
+  otpCode          String?
+  otpExpiresAt     DateTime?
+  verificationType VerificationType @default(NONE)
+
+  // Account Status
+  isActive  Boolean @default(true)
+  isDeleted Boolean @default(false)
+
+  // Timestamps
+  lastLogin DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  refreshTokens RefreshToken[]
+
+  @@index([email])
+  @@index([phone])
+  @@index([role])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([userId])
+}

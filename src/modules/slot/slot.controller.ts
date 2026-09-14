@@ -1,93 +1,317 @@
-import { Request, Response, NextFunction } from 'express';
-import { SlotService } from './slot.service';
+import { Request, Response } from "express";
+import { StatusCodes } from "http-status-codes";
 
-export const SlotController = {
-  createSlot: async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const result = await SlotService.createSlot(req.body);
+import {
+  GroundType,
+  SlotStatus,
+  SlotTimeType,
+  SportType,
+} from "@prisma/client";
 
-      return res.status(201).json({
-        success: true,
-        message: 'Slot created successfully!',
-        data: result,
-      });
-    } catch (error: unknown) {
-      console.log('Error creating slot:', error);
-      next(error);
-    }
+import { SlotService } from "./slot.service";
+import { ICreateSlot } from "./slot.interface";
+
+import { catchAsync } from "../../shared/utils/catchAsync";
+import sendResponse from "../../shared/utils/response";
+
+// ==========================================
+// CREATE
+// ==========================================
+
+const createSlot = catchAsync(
+  async (req: Request, res: Response) => {
+    const payload =
+      req.body as ICreateSlot;
+
+    const result =
+      await SlotService.createSlot(
+        payload,
+      );
+
+    sendResponse(res, {
+      statusCode:
+        StatusCodes.CREATED,
+
+      success: true,
+
+      message:
+        "Slot created successfully!",
+
+      data: result,
+    });
   },
+);
 
-  getAllSlots: async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const filters = {
-        searchTerm: req.query.searchTerm as string,
-        bookingDate: req.query.bookingDate as string,
-        startDate: req.query.startDate as string,
-        endDate: req.query.endDate as string,
-        startTime: req.query.startTime as string,
-        endTime: req.query.endTime as string,
-        groundType: req.query.groundType as string,
-        sportType: req.query.sportType as string,
-        slotTimeType: req.query.slotTimeType as string,
-        packageNumber: req.query.packageNumber ? Number(req.query.packageNumber) : undefined,
-        status: req.query.status as string,
-        isNightMatch: req.query.isNightMatch ? req.query.isNightMatch === 'true' : undefined,
-        hasRainEffect: req.query.hasRainEffect ? req.query.hasRainEffect === 'true' : undefined,
-        hasSoundSystem: req.query.hasSoundSystem ? req.query.hasSoundSystem === 'true' : undefined,
-        minPrice: req.query.minPrice ? Number(req.query.minPrice) : undefined,
-        maxPrice: req.query.maxPrice ? Number(req.query.maxPrice) : undefined,
-      };
+// ==========================================
+// GET ALL
+// ==========================================
 
-      const pagination = {
-        page: req.query.page ? Number(req.query.page) : 1,
-        limit: req.query.limit ? Number(req.query.limit) : 10,
-        sortBy: (req.query.sortBy as string) || 'createdAt',
-        sortOrder: (req.query.sortOrder as 'asc' | 'desc') || 'desc',
-      };
+const getAllSlots = catchAsync(
+  async (req: Request, res: Response) => {
+    // ------------------------------------------
+    // Filters
+    // ------------------------------------------
 
-      const result = await SlotService.getAllSlots(
-        filters as Parameters<typeof SlotService.getAllSlots>[0],
+    const filters = {
+      searchTerm:
+        typeof req.query.searchTerm ===
+        "string"
+          ? req.query.searchTerm
+          : undefined,
+
+      bookingDate:
+        typeof req.query.bookingDate ===
+        "string"
+          ? req.query.bookingDate
+          : undefined,
+
+      startDate:
+        typeof req.query.startDate ===
+        "string"
+          ? req.query.startDate
+          : undefined,
+
+      endDate:
+        typeof req.query.endDate ===
+        "string"
+          ? req.query.endDate
+          : undefined,
+
+      startTime:
+        typeof req.query.startTime ===
+        "string"
+          ? req.query.startTime
+          : undefined,
+
+      endTime:
+        typeof req.query.endTime ===
+        "string"
+          ? req.query.endTime
+          : undefined,
+
+      groundType:
+        typeof req.query.groundType ===
+        "string"
+          ? (req.query.groundType as GroundType)
+          : undefined,
+
+      sportType:
+        typeof req.query.sportType ===
+        "string"
+          ? (req.query.sportType as SportType)
+          : undefined,
+
+      slotTimeType:
+        typeof req.query.slotTimeType ===
+        "string"
+          ? (req.query.slotTimeType as SlotTimeType)
+          : undefined,
+
+      packageNumber:
+        typeof req.query.packageNumber ===
+        "string"
+          ? Number(req.query.packageNumber)
+          : undefined,
+
+      status:
+        typeof req.query.status ===
+        "string"
+          ? (req.query.status as SlotStatus)
+          : undefined,
+
+      isNightMatch:
+        typeof req.query.isNightMatch ===
+        "string"
+          ? req.query.isNightMatch ===
+            "true"
+          : undefined,
+
+      hasRainEffect:
+        typeof req.query.hasRainEffect ===
+        "string"
+          ? req.query.hasRainEffect ===
+            "true"
+          : undefined,
+
+      hasSoundSystem:
+        typeof req.query.hasSoundSystem ===
+        "string"
+          ? req.query.hasSoundSystem ===
+            "true"
+          : undefined,
+
+      minPrice:
+        typeof req.query.minPrice ===
+        "string"
+          ? Number(req.query.minPrice)
+          : undefined,
+
+      maxPrice:
+        typeof req.query.maxPrice ===
+        "string"
+          ? Number(req.query.maxPrice)
+          : undefined,
+    };
+
+    // ------------------------------------------
+    // Pagination
+    // ------------------------------------------
+
+    const pagination = {
+      page:
+        typeof req.query.page ===
+        "string"
+          ? Number(req.query.page)
+          : 1,
+
+      limit:
+        typeof req.query.limit ===
+        "string"
+          ? Number(req.query.limit)
+          : 10,
+
+      sortBy:
+        typeof req.query.sortBy ===
+        "string"
+          ? req.query.sortBy
+          : "createdAt",
+
+      sortOrder:
+        req.query.sortOrder === "asc"
+          ? ("asc" as const)
+          : ("desc" as const),
+    };
+
+    const result =
+      await SlotService.getAllSlots(
+        filters,
         pagination,
       );
 
-      return res.status(200).json({
-        success: true,
-        message: 'Slots fetched successfully!',
-        meta: result.meta,
-        data: result.data,
-      });
-    } catch (error: unknown) {
-      next(error);
-    }
+    sendResponse(res, {
+      statusCode:
+        StatusCodes.OK,
+
+      success: true,
+
+      message:
+        "Slots fetched successfully!",
+
+      meta: result.meta,
+
+      data: result.data,
+    });
   },
+);
 
-  deleteSlots: async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { ids } = req.body;
+// ==========================================
+// GET SINGLE
+// ==========================================
 
-      if (!ids) {
-        return res.status(400).json({
-          success: false,
-          message: 'ডিলিট করার জন্য অন্তত একটি স্লট আইডি প্রদান করুন।',
-        });
-      }
+const getSlotById = catchAsync(
+  async (req: Request, res: Response) => {
+    const id = Array.isArray(req.params.id)
+      ? req.params.id[0]
+      : req.params.id;
 
-      const deleteResult = await SlotService.deleteSlots(ids);
+    const result =
+      await SlotService.getSlotById(
+        id,
+      );
 
-      if (deleteResult.count === 0) {
-        return res.status(404).json({
-          success: false,
-          message: 'যে স্লটগুলো মুছতে চাচ্ছেন তা খুঁজে পাওয়া যায়নি।',
-        });
-      }
+    sendResponse(res, {
+      statusCode:
+        StatusCodes.OK,
 
-      return res.status(200).json({
-        success: true,
-        message: `${deleteResult.count} টি স্লট সফলভাবে মুছে ফেলা হয়েছে।`,
-        deletedCount: deleteResult.count,
-      });
-    } catch (error: unknown) {
-      next(error);
-    }
+      success: true,
+
+      message:
+        "Slot fetched successfully!",
+
+      data: result,
+    });
   },
+);
+
+// ==========================================
+// UPDATE
+// ==========================================
+
+const updateSlot = catchAsync(
+  async (req: Request, res: Response) => {
+    const id = Array.isArray(req.params.id)
+      ? req.params.id[0]
+      : req.params.id;
+
+    const result =
+      await SlotService.updateSlot(
+        id,
+        req.body,
+      );
+
+    sendResponse(res, {
+      statusCode:
+        StatusCodes.OK,
+
+      success: true,
+
+      message:
+        "Slot updated successfully!",
+
+      data: result,
+    });
+  },
+);
+
+// ==========================================
+// DELETE MULTIPLE
+// ==========================================
+
+const deleteSlots = catchAsync(
+  async (req: Request, res: Response) => {
+    const { ids } = req.body;
+
+    const result =
+      await SlotService.deleteSlots(
+        ids,
+      );
+
+    if (result.count === 0) {
+      sendResponse(res, {
+        statusCode:
+          StatusCodes.NOT_FOUND,
+
+        success: false,
+
+        message:
+          "যে স্লটগুলো মুছতে চাচ্ছেন তা খুঁজে পাওয়া যায়নি।",
+
+        data: null,
+      });
+
+      return;
+    }
+
+    sendResponse(res, {
+      statusCode:
+        StatusCodes.OK,
+
+      success: true,
+
+      message: `${result.count} টি স্লট সফলভাবে মুছে ফেলা হয়েছে।`,
+
+      data: {
+        deletedCount:
+          result.count,
+      },
+    });
+  },
+);
+
+export const SlotController = {
+  createSlot,
+  getAllSlots,
+  getSlotById,
+  updateSlot,
+  deleteSlots,
 };

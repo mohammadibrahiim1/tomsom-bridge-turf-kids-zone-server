@@ -1,0 +1,241 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// =====================================================
+// USER
+// =====================================================
+
+model User {
+  id       String  @id @default(uuid())
+  username String? @unique
+  name     String
+  email    String? @unique
+  phone    String? @unique
+  password String
+
+  role Role @default(CUSTOMER)
+
+  avatarUrl String?
+
+  isMustChangePassword Boolean @default(false)
+
+  passwordResetToken   String?
+  passwordResetExpires DateTime?
+
+  isEmailVerified Boolean @default(false)
+  isPhoneVerified Boolean @default(false)
+
+  otpCode      String?
+  otpExpiresAt DateTime?
+
+  verificationType VerificationType @default(NONE)
+
+  isActive  Boolean @default(true)
+  isDeleted Boolean @default(false)
+
+  lastLogin DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  status UserStatus @default(PENDING)
+
+  refreshTokens RefreshToken[]
+
+  @@index([email])
+  @@index([phone])
+  @@index([role])
+}
+
+// =====================================================
+// REFRESH TOKEN
+// =====================================================
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// =====================================================
+// SLOT
+// =====================================================
+
+model Slot {
+  id     String @id @default(uuid())
+  slotId String @unique
+
+  // ---------------------------------------------------
+  // Ground
+  // ---------------------------------------------------
+
+  groundType   GroundType @default(PITCH_1_SMALL)
+  groundTypeBn String?    @default("মাঠ ১ (ছোট মাঠ)")
+
+  // ---------------------------------------------------
+  // Sport
+  // ---------------------------------------------------
+
+  sportType   SportType @default(FOOTBALL)
+  sportTypeBn String?
+
+  // ---------------------------------------------------
+  // Package
+  // ---------------------------------------------------
+
+  packageNumber Int?
+  packageName   String?
+
+  // ---------------------------------------------------
+  // Time
+  // ---------------------------------------------------
+
+  startTime   String
+  endTime     String
+  displayTime String
+
+  bookingDate DateTime?
+
+  // ---------------------------------------------------
+  // Duration
+  // ---------------------------------------------------
+
+  playDurationMinutes   Int @default(55)
+  bufferDurationMinutes Int @default(5)
+
+  // ---------------------------------------------------
+  // Extra Time
+  // ---------------------------------------------------
+
+  hasExtraTime     Boolean @default(false)
+  extraTimeMinutes Int     @default(0)
+  extraTimeCharge  Float   @default(0)
+
+  // ---------------------------------------------------
+  // Slot Time Type
+  // ---------------------------------------------------
+
+  slotTimeType   SlotTimeType @default(EVENING)
+  slotTimeTypeBn String?
+
+  // ---------------------------------------------------
+  // Pricing
+  // ---------------------------------------------------
+
+  regularPrice      Float
+  extraGroundCharge Float @default(200)
+  totalPrice        Float
+
+  peakPrice    Float?
+  weekendPrice Float?
+
+  // ---------------------------------------------------
+  // Features
+  // ---------------------------------------------------
+
+  isNightMatch   Boolean @default(false)
+  hasRainEffect  Boolean @default(false)
+  hasSoundSystem Boolean @default(false)
+
+  includedAmenities String[] @default([])
+
+  customAttributes Json?
+
+  // ---------------------------------------------------
+  // Status
+  // ---------------------------------------------------
+
+  status   SlotStatus @default(AVAILABLE)
+  isActive Boolean    @default(true)
+
+  // ---------------------------------------------------
+  // Timestamps
+  // ---------------------------------------------------
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ---------------------------------------------------
+  // Indexes
+  // ---------------------------------------------------
+
+  @@index([sportType])
+  @@index([groundType])
+  @@index([status])
+  @@index([bookingDate])
+  @@index([slotTimeType])
+  // IMPORTANT:
+  // Existing PostgreSQL table is "slots".
+  // Prisma model name is now "Slot".
+  @@map("slots")
+}
+
+// =====================================================
+// ENUMS
+// =====================================================
+
+enum SportType {
+  FOOTBALL
+  CRICKET
+  BADMINTON
+  KIDS_ZONE
+  TENNIS
+  BASKETBALL
+}
+
+enum GroundType {
+  PITCH_1_SMALL
+  PITCH_2_MEDIUM
+  PITCH_3_LARGE
+  INDOR_TURF
+  ROOFTOP_TURF
+  VIP_TURF
+}
+
+enum SlotTimeType {
+  EARLY_MORNING
+  MORNING
+  AFTERNOON
+  EVENING
+  NIGHT
+  LATE_NIGHT
+  WEEKEND_SPECIAL
+}
+
+enum SlotStatus {
+  AVAILABLE
+  BOOKED
+  LOCKED
+  MAINTENANCE
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  CUSTOMER
+  EMPLOYEE
+}
+
+enum VerificationType {
+  EMAIL
+  PHONE
+  BOTH
+  NONE
+}
+
+enum UserStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}

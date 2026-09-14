@@ -2,8 +2,15 @@ export class AppError extends Error {
   public statusCode: number;
   public isOperational: boolean;
 
-  constructor(statusCode: number, message: string, isOperational = true, stack = '') {
+  constructor(
+    statusCode: number,
+    message: string,
+    isOperational = true,
+    stack = '',
+  ) {
     super(message);
+
+    this.name = 'AppError';
     this.statusCode = statusCode;
     this.isOperational = isOperational;
 

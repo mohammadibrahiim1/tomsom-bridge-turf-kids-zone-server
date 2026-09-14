@@ -4,7 +4,9 @@ const defaultOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
   'http://127.0.0.1:5173',
-  'https://api.tomsomturf.com'
+  'https://api.tomsomturf.com',
+  'https://tomsomturf.com',
+  "https://www.tomsomturf.com"
 ];
 
 const allowedOrigins = process.env.ALLOWED_ORIGINS
@@ -13,7 +15,7 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
 
 export const corsOptions: CorsOptions = {
   origin: (origin, callback) => {
-    // মোবাইল অ্যাপ বা সার্ভার-টু-সার্ভার রিকোয়েস্টের (যেমন Postman) জন্য origin undefined হতে পারে
+    
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {

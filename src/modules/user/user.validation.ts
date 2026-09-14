@@ -1,33 +1,70 @@
 import z from 'zod';
 
-export const registerUserSchema = z
-  .object({
-    name: z.string().min(2, 'Name must be at least 5 characters'),
-    username: z.string().min(3, 'Username must be at least 6 characters'),
+// ========================================
+// REGISTER VALIDATION
+// ========================================
 
-    email: z
-      .string()
-      .email('Invalid email format')
-      .refine((val) => !val || val.endsWith('@gmail.com'), {
-        message: 'Email must be a valid @gmail.com address',
-      })
-      .optional(),
+export const registerUserSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(2, 'Name must be at least 2 characters'),
 
-    phone: z.string().regex(/^01[3-9]\d{8}$/, 'Phone number must be a valid 11-digit BD number'),
+  username: z
+    .string()
+    .trim()
+    .min(3, 'Username must be at least 3 characters'),
 
-    password: z.string().min(6, 'Password must be at least 6 characters'),
-    avatarUrl: z.string().url('Invalid photo URL').optional(),
-  })
-  .refine((data) => data.email || data.phone, {
-    message: 'Either Email or Phone number is required for registration',
-    path: ['phone'], // এররটি ফোনের নিচে দেখাবে
-  });
+  email: z
+    .string()
+    .trim()
+    .email('Invalid email format')
+    .refine(
+      (val) => val.endsWith('@gmail.com'),
+      {
+        message:
+          'Email must be a valid @gmail.com address',
+      },
+    )
+    .optional(),
 
-export type TRegisterInput = z.infer<typeof registerUserSchema>;
+  phone: z
+    .string()
+    .trim()
+    .regex(
+      /^01[3-9]\d{8}$/,
+      'Phone number must be a valid 11-digit BD number',
+    ),
 
-export const loginUserSchema = z.object({
-  identity: z.string().min(1, 'Username, email or phone number is required'),
-  password: z.string().min(1, 'Password is required'),
+  password: z
+    .string()
+    .min(6, 'Password must be at least 6 characters'),
 });
 
-export type TLoginInput = z.infer<typeof loginUserSchema>;
+// ========================================
+// LOGIN VALIDATION
+// ========================================
+
+export const loginUserSchema = z.object({
+  identity: z
+    .string()
+    .trim()
+    .min(
+      1,
+      'Username, email or phone number is required',
+    ),
+
+  password: z
+    .string()
+    .min(1, 'Password is required'),
+});
+
+// ========================================
+// TYPES
+// ========================================
+
+export type TRegisterInput =
+  z.infer<typeof registerUserSchema>;
+
+export type TLoginInput =
+  z.infer<typeof loginUserSchema>;

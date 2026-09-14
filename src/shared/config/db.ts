@@ -1,18 +1,40 @@
-import mongoose from 'mongoose';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from '@prisma/client';
+
+const connectionString = process.env.CP_DB_URL;
+
+if (!connectionString) {
+  throw new Error('CP_DB_URL is not defined');
+}
+
+const adapter = new PrismaPg({
+  connectionString,
+});
+
+const prisma = new PrismaClient({
+  adapter,
+});
 
 const connectDB = async (): Promise<void> => {
   try {
-    const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/tomsom-bridge-turf';
-     await mongoose.connect(mongoUri);
-    console.log(`DB connected`);
+    await prisma.$connect();
+
+    console.log(
+      'PostgreSQL Database connected successfully via Prisma',
+    );
   } catch (error: unknown) {
     if (error instanceof Error) {
-      console.error(`Database connection error: ${error.message}`);
+      console.error(
+        `Database connection error: ${error.message}`,
+      );
     } else {
-      console.error('An unknown error occurred during database connection');
+      console.error(
+        'An unknown error occurred during database connection',
+      );
     }
+
     process.exit(1);
   }
 };
 
-export default connectDB;
+export { prisma, connectDB };

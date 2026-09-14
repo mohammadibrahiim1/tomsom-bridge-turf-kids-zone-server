@@ -1,0 +1,91 @@
+enum SportType {
+  FOOTBALL
+  CRICKET
+  BADMINTON
+  KIDS_ZONE
+  TENNIS
+  BASKETBALL
+}
+
+enum GroundType {
+  PITCH_1_SMALL
+  PITCH_2_MEDIUM
+  PITCH_3_LARGE
+  INDOR_TURF
+  ROOFTOP_TURF
+  VIP_TURF
+}
+
+enum SlotTimeType {
+  EARLY_MORNING
+  MORNING
+  AFTERNOON
+  EVENING
+  NIGHT
+  LATE_NIGHT
+  WEEKEND_SPECIAL
+}
+
+enum SlotStatus {
+  AVAILABLE
+  BOOKED
+  LOCKED
+  MAINTENANCE
+}
+
+model Slot {
+  id                    String       @id @default(uuid())
+  slotId                String       @unique
+
+  groundType            GroundType   @default(PITCH_1_SMALL)
+  groundTypeBn          String?      @default("মাঠ ১ (ছোট মাঠ)")
+
+  sportType             SportType    @default(FOOTBALL)
+  sportTypeBn           String?
+
+  packageNumber         Int?
+  packageName           String?
+
+  startTime             String
+  endTime               String
+  displayTime           String
+  bookingDate           DateTime?
+
+  playDurationMinutes   Int          @default(55)
+  bufferDurationMinutes Int          @default(5)
+
+  hasExtraTime          Boolean      @default(false)
+  extraTimeMinutes      Int          @default(0)
+  extraTimeCharge       Float        @default(0)
+
+  slotTimeType          SlotTimeType @default(EVENING)
+  slotTimeTypeBn            String?
+
+  regularPrice          Float
+  extraGroundCharge     Float        @default(200)
+  totalPrice            Float
+  peakPrice             Float?
+  weekendPrice          Float?
+
+  isNightMatch          Boolean      @default(false)
+  hasRainEffect         Boolean      @default(false)
+  hasSoundSystem        Boolean      @default(false)
+
+  includedAmenities     String[]     @default([])
+
+  customAttributes      Json?
+
+  status                SlotStatus   @default(AVAILABLE)
+  isActive              Boolean      @default(true)
+
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  @@index([sportType])
+  @@index([groundType])
+  @@index([status])
+  @@index([bookingDate])
+  @@index([slotTimeType])
+
+  @@map("slots")
+}
