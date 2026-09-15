@@ -14,6 +14,9 @@
     "postinstall": "prisma skills sync || exit 0",
     "seed": "tsx src/scripts/seed.ts"
   },
+  "prisma": {
+  "schema": "prisma/schema.prisma"
+},
   "keywords": [],
   "author": "",
   "license": "ISC",
