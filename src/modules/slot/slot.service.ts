@@ -561,7 +561,6 @@ export const SlotService = {
         total,
         totalPage,
       },
-
       data,
     };
   },

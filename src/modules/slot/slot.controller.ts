@@ -198,7 +198,6 @@ const getAllSlots = catchAsync(
         "Slots fetched successfully!",
 
       meta: result.meta,
-
       data: result.data,
     });
   },

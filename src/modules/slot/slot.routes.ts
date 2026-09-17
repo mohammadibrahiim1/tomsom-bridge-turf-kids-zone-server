@@ -10,8 +10,6 @@ router.post('/create', SlotController.createSlot);
 router.get('/', SlotController.getAllSlots);
 
 
-
-
 // ==========================================
 // GET SINGLE
 // GET /api/v1/slots/:id

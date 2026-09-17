@@ -1,10 +1,11 @@
+
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 
-const connectionString = process.env.CP_DB_URL;
+const connectionString = process.env.POSTGRES_URL;
 
 if (!connectionString) {
-  throw new Error('CP_DB_URL is not defined');
+  throw new Error('POSTGRES_URL is not defined');
 }
 
 const adapter = new PrismaPg({
@@ -38,3 +39,4 @@ const connectDB = async (): Promise<void> => {
 };
 
 export { prisma, connectDB };
+
