@@ -23,8 +23,6 @@ async function main(): Promise<void> {
     process.env.SUPER_ADMIN_PASSWORD ||
     'TsTurf_2026_Kid@Zone!';
 
-  console.log('🔄 Checking Super Admin...');
-
   const hashedPassword = await bcrypt.hash(rawPassword, 12);
 
   const existingUser = await prisma.user.findFirst({
@@ -51,7 +49,7 @@ async function main(): Promise<void> {
       },
     });
 
-    console.log('✅ Super Admin updated successfully!');
+    
   } else {
     await prisma.user.create({
       data: {
@@ -70,17 +68,8 @@ async function main(): Promise<void> {
       },
     });
 
-    console.log('✅ Super Admin created successfully!');
+    
   }
-
-  console.log('');
-  console.log('=================================');
-  console.log('       SUPER ADMIN DETAILS       ');
-  console.log('=================================');
-  console.log(`📧 Email: ${email}`);
-  console.log(`👤 Username: ${username}`);
-  console.log(`🔑 Password: ${rawPassword}`);
-  console.log('=================================');
 }
 
 main()
